@@ -35,7 +35,13 @@ Widget drawer(context, state) {
                         fontSize: 20.0,
                         fontWeight: FontWeight.w500))),
           ])),
-      _drawerEntry('Home', Icons.home, "/"),
+      ListTile(
+        leading: const Icon(Icons.home),
+        title: const Text('Home'),
+        onTap: () {
+          Navigator.pop(context);
+        },
+      ),
       _drawerEntry('Meal planner', Icons.calendar_today_rounded, "/"),
       _drawerEntry(
           'Shopping lists', Icons.checklist_outlined, "/shopping-lists"),

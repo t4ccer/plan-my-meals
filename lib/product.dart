@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:decimal/decimal.dart';
 import 'package:flutter/services.dart';
-import 'package:plan_my_meals/utils.dart';
 
 import 'utils.dart';
 
