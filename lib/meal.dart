@@ -3,7 +3,7 @@ import 'package:decimal/decimal.dart';
 
 import 'product.dart';
 
-class MealManager{
+class MealsManager{
   final Map<String, Meal> meals = {};
   final menu = MealMenu();
   var currentMeal = "";

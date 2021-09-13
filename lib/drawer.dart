@@ -1,6 +1,17 @@
 import 'package:flutter/material.dart';
 
-Widget _drawer(context) {
+Widget drawer(context, state) {
+  Widget _drawerEntry(name, icon, route) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(name),
+      onTap: () {
+        Navigator.pop(context);
+        Navigator.pushNamed(context, route, arguments: state);
+      },
+    );
+  }
+
   return Drawer(
       child: ListView(
     padding: EdgeInsets.zero,
@@ -24,25 +35,14 @@ Widget _drawer(context) {
                         fontSize: 20.0,
                         fontWeight: FontWeight.w500))),
           ])),
-      _drawerEntry(context, 'Home', Icons.home, "/"),
+      _drawerEntry('Home', Icons.home, "/"),
+      _drawerEntry('Meal planner', Icons.calendar_today_rounded, "/"),
       _drawerEntry(
-          context, 'Meal planner', Icons.calendar_today_rounded, "/"),
-      _drawerEntry(context, 'Shopping lists', Icons.checklist_outlined,
-          "/shopping-lists"),
-      _drawerEntry(context, 'Stock manager', Icons.now_widgets, "/"),
-      _drawerEntry(context, 'Products', Icons.favorite, "/products"),
-      _drawerEntry(context, 'Meals', Icons.fastfood, "/meals"),
-      _drawerEntry(context, 'Settings', Icons.settings, "/"),
+          'Shopping lists', Icons.checklist_outlined, "/shopping-lists"),
+      _drawerEntry('Stock manager', Icons.now_widgets, "/"),
+      _drawerEntry('Products', Icons.favorite, "/products"),
+      _drawerEntry('Meals', Icons.fastfood, "/meals"),
+      _drawerEntry('Settings', Icons.settings, "/"),
     ],
   ));
-}
-
-Widget _drawerEntry(context, name, icon, route) {
-  return ListTile(
-    leading: Icon(icon),
-    title: Text(name),
-    onTap: () {
-      Navigator.pushNamed(context, route);
-    },
-  );
 }
