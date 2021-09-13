@@ -6,10 +6,38 @@ void main() => runApp(const MyApp());
 
 enum Section { HOME, PRODUCTS, PRODUCT_ADD, MEALS, SHOPPING_LISTS }
 
+class ProductMenu {
+  TextEditingController productName = TextEditingController();
+  TextEditingController productServings = TextEditingController();
+  TextEditingController productPrice = TextEditingController();
+
+  void clear() {
+    productName.text = '';
+    productServings.text = '';
+    productPrice.text = '';
+  }
+
+  bool isReady() {
+    return (productName.text != '' &&
+        productServings.text != '' &&
+        productPrice.text != '');
+  }
+
+  Product getProduct() {
+    return Product(
+      name: productName.text,
+      servings: int.parse(productServings.text),
+      price: Decimal.parse(productPrice.text),
+    );
+  }
+}
+
 class Product {
   String name;
   int servings;
   Decimal price;
+
+  Decimal get pricePerServing => price / Decimal.fromInt(servings);
 
   Product({
     required this.name,
@@ -56,11 +84,9 @@ class MyApp extends StatelessWidget {
 
 class _MyHomePageState extends State<HomePage> {
   Section _section = Section.HOME;
-  final _products = <Product>[]; //TODO use map or sth
-  final TextEditingController _addProductName = TextEditingController();
-  final TextEditingController _addProductServings = TextEditingController();
-  final TextEditingController _addProductPrice = TextEditingController();
-  int _currentProduct = -1;
+  final Map<String, Product> _products = {};
+  final ProductMenu _productMenu = ProductMenu();
+  String _currentProduct = "";
 
   @override
   Widget build(BuildContext context) {
@@ -91,26 +117,29 @@ class _MyHomePageState extends State<HomePage> {
         _body = ListView.builder(
           itemCount: _products.length,
           itemBuilder: (context, index) {
+            var key = _products.keys.elementAt(index);
+            var product = _products[key];
+            if (product == null) return const SizedBox.shrink();
             return Card(
                 child: ListTile(
-                    title: Text(_products[index].name),
-                    onTap: () {
-                      setState(() {
-                        _currentProduct = index;
-                        _addProductName.text = _products[index].name;
-                        _addProductServings.text =
-                            _products[index].servings.toString();
-                        _addProductPrice.text =
-                            _products[index].price.toString();
-                        _section = Section.PRODUCT_ADD;
-                      });
-                    }));
+                  title: Text("${product.name} (\$${product.pricePerServing.toStringAsFixed(2)}/serv)"),
+              onTap: () {
+                setState(() {
+                  _currentProduct = key;
+                  _productMenu.productName.text = product.name;
+                  _productMenu.productServings.text =
+                      product.servings.toString();
+                  _productMenu.productPrice.text = product.price.toString();
+                  _section = Section.PRODUCT_ADD;
+                });
+              },
+            ));
           },
         );
         _floatingButton = FloatingActionButton(
           onPressed: () {
             setState(() {
-              _currentProduct = -1;
+              _currentProduct = "";
               _section = Section.PRODUCT_ADD;
             });
           },
@@ -121,7 +150,7 @@ class _MyHomePageState extends State<HomePage> {
         break;
 
       case Section.PRODUCT_ADD:
-        _title = 'Add new product';
+        _title = 'My products';
         _body = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -129,7 +158,7 @@ class _MyHomePageState extends State<HomePage> {
                 padding:
                     const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
                 child: TextFormField(
-                  controller: _addProductName,
+                  controller: _productMenu.productName,
                   decoration: const InputDecoration(
                     labelText: 'Product name',
                     hintText: 'Canned beans',
@@ -143,7 +172,7 @@ class _MyHomePageState extends State<HomePage> {
                   inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly,
                   ],
-                  controller: _addProductServings,
+                  controller: _productMenu.productServings,
                   decoration: const InputDecoration(
                     labelText: 'Servings',
                     hintText: '2',
@@ -155,7 +184,7 @@ class _MyHomePageState extends State<HomePage> {
                 child: TextFormField(
                   keyboardType: TextInputType.number,
                   inputFormatters: [DecimalTextInputFormatter()],
-                  controller: _addProductPrice,
+                  controller: _productMenu.productPrice,
                   decoration: const InputDecoration(
                     labelText: 'Price',
                     hintText: '\$3.49',
@@ -170,49 +199,40 @@ class _MyHomePageState extends State<HomePage> {
                         style: ElevatedButton.styleFrom(
                             shape: const StadiumBorder()),
                         onPressed: () {
-                          if (_currentProduct >= 0) {
+                          if (!_productMenu.isReady()) return;
+
+                          if (_currentProduct != "") {
                             setState(() {
-                              _products[_currentProduct] = (Product(
-                                name: _addProductName.text,
-                                servings: int.parse(_addProductServings.text),
-                                price: Decimal.parse(_addProductPrice.text),
-                              ));
-                              _addProductName.text = '';
-                              _addProductServings.text = '';
-                              _addProductPrice.text = '';
+                              _products[_currentProduct] =
+                                  _productMenu.getProduct();
                               _section = Section.PRODUCTS;
                             });
+                            _productMenu.clear();
                             return;
                           }
 
-                          if (_addProductName.text == '') return;
                           // ignore: iterable_contains_unrelated_type
-                          if (_products.contains(_addProductName.text)) {
+                          if (_products.containsKey(_productMenu.productName.text)) {
                             ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                     content: Text(
                                         'Product with that name already exists')));
                             return;
                           }
+                          var newProduct = _productMenu.getProduct();
                           setState(() {
-                            _products.add(Product(
-                              name: _addProductName.text,
-                              servings: int.parse(_addProductServings.text),
-                              price: Decimal.parse(_addProductPrice.text),
-                            ));
-                            _addProductName.text = '';
-                            _addProductServings.text = '';
-                            _addProductPrice.text = '';
+                            _products[newProduct.name] = newProduct;
+                            _productMenu.clear();
                             _section = Section.PRODUCTS;
                           });
                         },
                         child: Text(
-                            _iff(_currentProduct >= 0, 'Save product',
+                            _iff(_currentProduct != "", 'Save product',
                                 'Add product'),
                             textScaleFactor: 1.25),
                       ),
                       _createIf(
-                          _currentProduct >= 0,
+                          _currentProduct != "",
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8.0),
                             child: ElevatedButton(
@@ -222,10 +242,8 @@ class _MyHomePageState extends State<HomePage> {
                               ),
                               onPressed: () {
                                 setState(() {
-                                  _products.removeAt(_currentProduct);
-                                  _addProductName.text = '';
-                                  _addProductServings.text = '';
-                                  _addProductPrice.text = '';
+                                  _products.remove(_currentProduct);
+                                  _productMenu.clear();
                                   _section = Section.PRODUCTS;
                                 });
                               },
@@ -241,9 +259,7 @@ class _MyHomePageState extends State<HomePage> {
         _floatingButton = FloatingActionButton(
           onPressed: () {
             setState(() {
-              _addProductName.text = '';
-              _addProductServings.text = '';
-              _addProductPrice.text = '';
+              _productMenu.clear();
               _section = Section.PRODUCTS;
             });
           },
