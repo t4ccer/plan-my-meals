@@ -241,7 +241,8 @@ class _MealsAddPageState extends State<MealsAddPage> {
   Widget build(BuildContext context) {
     final _state = ModalRoute.of(context)!.settings.arguments as AppState;
     final _mealsManager = _state.mealsManager as MealsManager;
-    final _products = _state.getProducts();
+    final _productsManager = _state.productsManager as ProductManager;
+    final _products = _productsManager.getProducts();
 
     return Scaffold(
       appBar: AppBar(title: const Text("Add meal")),
