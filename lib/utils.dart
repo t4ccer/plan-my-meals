@@ -66,12 +66,17 @@ class AppState {
     CREATE TABLE IF NOT EXISTS planned_meals (
       id INTEGER NOT NULL PRIMARY KEY,
       meal_id INTEGER NOT NULL,
-      date INTEGER NOT NULL
+      date INTEGER NOT NULL,
+      done INTEGER NOT NULL
     );
       ''');
     productsManager = ProductManager(db: _db!);
     mealsManager = MealsManager(db: _db!);
-    planner = MealPlanner(db: _db!, mealsManager: mealsManager!);
+    planner = MealPlanner(
+      db: _db!,
+      mealsManager: mealsManager!,
+      productsManager: productsManager!,
+    );
   }
 }
 

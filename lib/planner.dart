@@ -4,6 +4,7 @@ import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'dart:developer' as developer;
 
 import 'meal.dart';
+import 'product.dart';
 import 'utils.dart';
 
 class MealPlannerDataSource extends CalendarDataSource {
@@ -16,10 +17,12 @@ class PlannedMeal {
   int id;
   DateTime date;
   Meal meal;
+  bool done;
 
   PlannedMeal({
     required this.date,
     required this.meal,
+    required this.done,
     this.id = -1,
   });
 }
@@ -27,19 +30,41 @@ class PlannedMeal {
 class MealPlanner {
   Database db;
   MealsManager mealsManager;
+  ProductManager productsManager;
   int current = -1;
   DateTime currentDate = DateTime.fromMillisecondsSinceEpoch(0);
 
   MealPlanner({
     required this.db,
     required this.mealsManager,
+    required this.productsManager,
   });
 
   void addPlannedMeal(PlannedMeal plannedMeal) {
-    final q =
-        db.prepare('INSERT INTO planned_meals (meal_id, date) VALUES (?, ?)');
-    q.execute([plannedMeal.meal.id, plannedMeal.date.millisecondsSinceEpoch]);
+    final q = db.prepare(
+        'INSERT INTO planned_meals (meal_id, date, done) VALUES (?, ?, ?)');
+    q.execute([
+      plannedMeal.meal.id,
+      plannedMeal.date.millisecondsSinceEpoch,
+      plannedMeal.done ? 1 : 0
+    ]);
     q.dispose();
+  }
+
+  void updatePlannedMeal(PlannedMeal plannedMeal) {
+    final q = db.prepare('UPDATE planned_meals SET done = ? where id = ?');
+    q.execute([plannedMeal.done ? 1 : 0, plannedMeal.id]);
+    q.dispose();
+  }
+
+  void updateUsedProducts(PlannedMeal plannedMeal) {
+    for (var ingr in plannedMeal.meal.ingredients) {
+      var p = ingr.product;
+      p.amount = plannedMeal.done
+          ? p.amount - ingr.servings
+          : p.amount + ingr.servings;
+      productsManager.updateProduct(p);
+    }
   }
 
   void removePlannedMeal(int id) {
@@ -50,7 +75,7 @@ class MealPlanner {
 
   Map<int, PlannedMeal> getPlannedMeals() {
     final rows = db.select(
-        'SELECT planned_meals.id AS plannedId, planned_meals.date AS plannedDate, meals.id as mealId, meals.name as mealName, meals.servings as mealServings FROM planned_meals INNER JOIN meals ON planned_meals.meal_id = meals.id');
+        'SELECT planned_meals.id AS plannedId, planned_meals.date AS plannedDate, planned_meals.done AS plannedDone, meals.id as mealId, meals.name as mealName, meals.servings as mealServings FROM planned_meals INNER JOIN meals ON planned_meals.meal_id = meals.id');
     developer.log(rows.toString(), name: 'tmm.db.getPlannedMeals');
     Map<int, PlannedMeal> res = {};
     for (final row in rows) {
@@ -63,18 +88,20 @@ class MealPlanner {
           servings: row['mealServings'].round(),
           ingredients: mealsManager.getIngredients(row['mealId']),
         ),
+        done: row['plannedDone'] == 1,
       );
     }
     return res;
   }
 
   Appointment _addCalendarMeal(PlannedMeal plannedMeal) {
+    var color = plannedMeal.done ? const Color(0xff90caf9) : Colors.blue;
     return Appointment(
       startTime: plannedMeal.date,
       endTime: plannedMeal.date.add(const Duration(milliseconds: 1)),
       isAllDay: true,
       subject: plannedMeal.meal.name,
-      color: Colors.blue,
+      color: color,
       notes: '${plannedMeal.id}',
       startTimeZone: '',
       endTimeZone: '',
@@ -129,18 +156,34 @@ class _MealPlannerPageState extends State<MealPlannerPage> {
           ),
           onTap: (CalendarTapDetails details) {
             dynamic appointment = details.appointments![0];
-            if (appointment.notes != 'PLAN_MEAL') return;
-            setState(() {
-              _state.planner?.currentDate = details.date!;
-              Navigator.pushNamed(context, '/planner/add', arguments: _state)
-                  .then((_) => setState(() {}));
-            });
+            if (appointment.notes == 'PLAN_MEAL') {
+              setState(() {
+                _state.planner?.currentDate = details.date!;
+                Navigator.pushNamed(context, '/planner/add', arguments: _state)
+                    .then((_) => setState(() {}));
+              });
+            } else {
+              setState(() {
+                var id = int.parse(appointment.notes);
+                var plannedMeal =
+                    _state.planner?.getPlannedMeals()[id] as PlannedMeal;
+                plannedMeal.done = !plannedMeal.done;
+                _state.planner?.updatePlannedMeal(plannedMeal);
+                _state.planner?.updateUsedProducts(plannedMeal);
+              });
+            }
           },
           onLongPress: (CalendarLongPressDetails details) {
             dynamic appointment = details.appointments![0];
+            int id = int.parse(appointment.notes);
             if (appointment.notes == 'PLAN_MEAL') return;
             setState(() {
-              _state.planner?.removePlannedMeal(int.parse(appointment.notes));
+              var plannedMeal =
+                  _state.planner?.getPlannedMeals()[id] as PlannedMeal;
+              plannedMeal.done = false;
+              _state.planner?.updatePlannedMeal(plannedMeal);
+              _state.planner?.updateUsedProducts(plannedMeal);
+              _state.planner?.removePlannedMeal(id);
             });
           },
         ),
@@ -177,6 +220,7 @@ class _MealPlannerAddPageState extends State<MealPlannerAddPage> {
                   _state.planner?.addPlannedMeal(PlannedMeal(
                     date: (_state.planner?.currentDate) as DateTime,
                     meal: meal,
+                    done: false,
                   ));
                 });
               }
