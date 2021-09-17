@@ -107,12 +107,13 @@ class _MealsPageState extends State<MealsPage> {
             title: Text("${meal.name} (\$${meal.price.toStringAsFixed(2)})"),
             onTap: () {
               setState(() {
+                _mealsManager.menu.clear();
                 _mealsManager.current = meal.id;
                 _mealsManager.menu.name.text = meal.name;
                 _mealsManager.menu.servings.text = meal.servings.toString();
-                _mealsManager.menu.ingredientInput.text = '';
-                for (var i in meal.ingredients) {
-                  _mealsManager.menu.ingredients[i.product.id] = i;
+                for (var ingredient in meal.ingredients) {
+                  _mealsManager.menu.ingredients[ingredient.product.id] =
+                      ingredient;
                 }
               });
               Navigator.pushNamed(context, '/meals/add', arguments: _state)
@@ -148,7 +149,6 @@ class _MealsAddPageState extends State<MealsAddPage> {
   Widget build(BuildContext context) {
     final _state = ModalRoute.of(context)!.settings.arguments as AppState;
     final _mealsManager = _state.mealsManager;
-    final _productManager = _state.productsManager;
     final _products = _state.getProducts();
 
     return Scaffold(
