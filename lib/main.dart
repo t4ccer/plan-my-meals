@@ -18,13 +18,14 @@ class MyApp extends StatelessWidget {
       title: "Plan My Meals",
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.light,
       initialRoute: '/',
       routes: {
         '/': (context) => const HomePage(),
         '/products': (context) => const ProductsPage(),
         '/products/add': (context) => const ProductsAddPage(),
         '/meals': (context) => const MealsPage(),
+        '/meals/add': (context) => const MealsAddPage(),
       },
     );
   }
@@ -34,6 +35,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final _state = AppState();
+    _state.openDB();
 
     return Scaffold(
       appBar: AppBar(title: const Text("Plan My Meals")),

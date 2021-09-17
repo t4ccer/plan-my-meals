@@ -42,13 +42,13 @@ Widget drawer(context, state) {
           Navigator.pop(context);
         },
       ),
-      _drawerEntry('Meal planner', Icons.calendar_today_rounded, "/"),
-      _drawerEntry(
-          'Shopping lists', Icons.checklist_outlined, "/shopping-lists"),
-      _drawerEntry('Stock manager', Icons.now_widgets, "/"),
+      // _drawerEntry('Meal planner', Icons.calendar_today_rounded, "/"),
+      // _drawerEntry(
+      //     'Shopping lists', Icons.checklist_outlined, "/shopping-lists"),
+      // _drawerEntry('Stock manager', Icons.now_widgets, "/"),
       _drawerEntry('Products', Icons.favorite, "/products"),
       _drawerEntry('Meals', Icons.fastfood, "/meals"),
-      _drawerEntry('Settings', Icons.settings, "/"),
+      // _drawerEntry('Settings', Icons.settings, "/"),
     ],
   ));
 }
