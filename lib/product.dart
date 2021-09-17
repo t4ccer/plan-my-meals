@@ -1,12 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:decimal/decimal.dart';
 import 'package:flutter/services.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 import 'utils.dart';
 
 class ProductManager {
+  Database db;
   var menu = ProductMenu();
   int current = -1;
+
+  ProductManager({
+      required this.db,
+  });
+
+  void addProduct(Product product) {
+    final p = db.prepare(
+        'INSERT INTO products (name, servings, price) VALUES (?, ?, ?)');
+    p.execute([product.name, product.servings, product.priceCents]);
+    p.dispose();
+  }
+
+  void updateProduct(Product product) {
+    final p = db.prepare(
+        'UPDATE products SET name = ?, servings = ?, price = ? WHERE id = ?');
+    p.execute([product.name, product.servings, product.priceCents, product.id]);
+    p.dispose();
+  }
+
+  void removeProduct(int id) {
+    final p = db.prepare('DELETE FROM products WHERE id = ?');
+    p.execute([id]);
+    p.dispose();
+  }
+
+  List<Product> getProducts() {
+    final ResultSet res = db.select('SELECT * FROM products');
+    List<Product> lst = [];
+    for (final row in res) {
+      var product = Product(
+        name: row['name'],
+        servings: row['servings'].round(),
+        price: Decimal.fromInt(row['price']) / Decimal.fromInt(100),
+        id: row['id'],
+      );
+      lst.add(product);
+    }
+    return lst;
+  }
 }
 
 class ProductMenu {
@@ -68,8 +109,8 @@ class _ProductsPageState extends State<ProductsPage> {
   @override
   Widget build(BuildContext context) {
     final _state = ModalRoute.of(context)!.settings.arguments as AppState;
-    final _productManager = _state.productsManager;
-    final _products = _state.getProducts();
+    final _productManager = _state.productsManager as ProductManager;
+    final _products = _productManager.getProducts();
 
     return Scaffold(
       appBar: AppBar(title: const Text("My products")),
@@ -121,7 +162,7 @@ class _ProductsAddPageState extends State<ProductsAddPage> {
   @override
   Widget build(BuildContext context) {
     final _state = ModalRoute.of(context)!.settings.arguments as AppState;
-    final _productManager = _state.productsManager;
+    final _productManager = _state.productsManager as ProductManager;
 
     return Scaffold(
       appBar: AppBar(title: const Text("Add product")),
@@ -182,9 +223,9 @@ class _ProductsAddPageState extends State<ProductsAddPage> {
                       setState(() {
                         // If updating existing product
                         if (_productManager.current != -1) {
-                          _state.updateProduct(product);
+                          _productManager.updateProduct(product);
                         } else {
-                          _state.addProduct(product);
+                          _productManager.addProduct(product);
                         }
                         _productManager.menu.clear();
                       });
@@ -207,7 +248,7 @@ class _ProductsAddPageState extends State<ProductsAddPage> {
                         ),
                         onPressed: () {
                           setState(() {
-                            _state.removeProduct(_productManager.current);
+                            _productManager.removeProduct(_productManager.current);
                             _productManager.menu.clear();
                           });
                           Navigator.pop(context);

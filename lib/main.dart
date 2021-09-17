@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'planner.dart';
 import 'product.dart';
-import 'sections.dart';
 import 'meal.dart';
 import 'utils.dart';
 import 'drawer.dart';
@@ -26,6 +26,8 @@ class MyApp extends StatelessWidget {
         '/products/add': (context) => const ProductsAddPage(),
         '/meals': (context) => const MealsPage(),
         '/meals/add': (context) => const MealsAddPage(),
+        '/planner': (context) => const MealPlannerPage(),
+        '/planner/add': (context) => const MealPlannerAddPage(),        
       },
     );
   }
@@ -35,7 +37,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final _state = AppState();
-    _state.openDB();
+    // _state.openDB();
 
     return Scaffold(
       appBar: AppBar(title: const Text("Plan My Meals")),

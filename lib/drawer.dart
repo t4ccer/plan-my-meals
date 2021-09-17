@@ -42,7 +42,7 @@ Widget drawer(context, state) {
           Navigator.pop(context);
         },
       ),
-      // _drawerEntry('Meal planner', Icons.calendar_today_rounded, "/"),
+      _drawerEntry('Meal planner', Icons.calendar_today_rounded, "/planner"),
       // _drawerEntry(
       //     'Shopping lists', Icons.checklist_outlined, "/shopping-lists"),
       // _drawerEntry('Stock manager', Icons.now_widgets, "/"),

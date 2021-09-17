@@ -1,13 +1,105 @@
 import 'package:flutter/material.dart';
 import 'package:decimal/decimal.dart';
 import 'package:flutter/services.dart';
+import 'package:sqlite3/sqlite3.dart';
+import 'dart:developer' as developer;
 
 import 'product.dart';
 import 'utils.dart';
 
 class MealsManager {
+  Database db;
   final menu = MealMenu();
   var current = -1;
+
+  MealsManager({
+    required this.db,
+  });
+
+  void addMeal(Meal meal) {
+    final m = db.prepare('INSERT INTO meals (name, servings) VALUES (?, ?)');
+    m.execute([meal.name, meal.servings]);
+    m.dispose();
+
+    final id = db.lastInsertRowId;
+    _addIngredients(id, meal.ingredients);
+  }
+
+  void _addIngredients(int mealId, List<Ingredient> ingredients) {
+    final ingr = db.prepare(
+        "INSERT INTO ingredients (meal_id, product_id, servings) VALUES (?, ?, ?)");
+    for (var i in ingredients) {
+      if (i.servings < 1) continue;
+      ingr.execute([mealId, i.product.id, i.servings]);
+    }
+    ingr.dispose();
+  }
+
+  void updateMeal(Meal meal) {
+    final m =
+        db.prepare('UPDATE meals SET name = ?, servings = ? WHERE id = ?');
+    m.execute([meal.name, meal.servings, meal.id]);
+    m.dispose();
+
+    final i = db.prepare('DELETE FROM ingredients WHERE meal_id = ?');
+    i.execute([meal.id]);
+    i.dispose();
+
+    _addIngredients(meal.id, meal.ingredients);
+  }
+
+  void removeMeal(int id) {
+    final m = db.prepare('DELETE FROM meals WHERE id = ?');
+    m.execute([id]);
+    m.dispose();
+
+    final i = db.prepare('DELETE FROM ingredients WHERE meal_id = ?');
+    i.execute([id]);
+    i.dispose();
+
+    final q = db.prepare('DELETE FROM planned_meals WHERE meal_id = ?');
+    q.execute([id]);
+    q.dispose();
+  }
+
+  // TODO: It is n + 1, use join, idk how
+  List<Meal> getMeals() {
+    final ResultSet mealsRows = db.select('SELECT * FROM meals');
+    List<Meal> lst = [];
+    for (final mealRow in mealsRows) {
+      final meal = Meal(
+        id: mealRow['id'],
+        name: mealRow['name'],
+        servings: mealRow['servings'].round(),
+        ingredients: getIngredients(mealRow['id']),
+      );
+      developer.log(meal.toString(), name: 'tmm.db.getMeals');
+      lst.add(meal);
+    }
+    return lst;
+  }
+
+  List<Ingredient> getIngredients(int mealId) {
+    final ingrdientsRows = db.select(
+        'SELECT  products.id AS productId, products.name AS productName, products.servings AS productServings, products.price AS productPrice, ingredients.servings AS ingredientServings  FROM ingredients INNER JOIN products ON products.id=ingredients.product_id WHERE ingredients.meal_id = ? ',
+        [mealId]);
+    developer.log(ingrdientsRows.toString(), name: 'tmm.db.getIngredients');
+    List<Ingredient> res = [];
+    for (var row in ingrdientsRows) {
+      var ingr = Ingredient(
+        product: Product(
+          name: row['productName'],
+          price: Decimal.fromInt(row['productPrice']) / Decimal.fromInt(100),
+          servings: row['productServings'],
+          id: row['productId'],
+        ),
+        servings: row['ingredientServings'],
+      );
+      developer.log(ingr.toString(), name: 'tmm.db.getIngredients');
+      res.add(ingr);
+    }
+    return res;
+  }
 }
 
 class Ingredient {
@@ -93,8 +185,8 @@ class _MealsPageState extends State<MealsPage> {
   @override
   Widget build(BuildContext context) {
     final _state = ModalRoute.of(context)!.settings.arguments as AppState;
-    final _mealsManager = _state.mealsManager;
-    final _meals = _state.getMeals();
+    final MealsManager _mealsManager = _state.mealsManager as MealsManager;
+    final List<Meal> _meals = _mealsManager.getMeals();
 
     return Scaffold(
       appBar: AppBar(title: const Text("My meals")),
@@ -148,7 +240,7 @@ class _MealsAddPageState extends State<MealsAddPage> {
   @override
   Widget build(BuildContext context) {
     final _state = ModalRoute.of(context)!.settings.arguments as AppState;
-    final _mealsManager = _state.mealsManager;
+    final _mealsManager = _state.mealsManager as MealsManager;
     final _products = _state.getProducts();
 
     return Scaffold(
@@ -311,9 +403,9 @@ class _MealsAddPageState extends State<MealsAddPage> {
                         setState(() {
                           // If updating existing product
                           if (_mealsManager.current != -1) {
-                            _state.updateMeal(meal);
+                            _mealsManager.updateMeal(meal);
                           } else {
-                            _state.addMeal(meal);
+                            _mealsManager.addMeal(meal);
                           }
                           _mealsManager.menu.clear();
                         });
@@ -336,7 +428,7 @@ class _MealsAddPageState extends State<MealsAddPage> {
                           ),
                           onPressed: () {
                             setState(() {
-                              _state.removeMeal(_mealsManager.current);
+                              _mealsManager.removeMeal(_mealsManager.current);
                               _mealsManager.menu.clear();
                             });
                             Navigator.pop(context);
