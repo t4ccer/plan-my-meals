@@ -47,7 +47,8 @@ class AppState {
       id INTEGER NOT NULL PRIMARY KEY,
       name TEXT NOT NULL,
       servings INTEGER NOT NULL,
-      price INTEGER NOT NULL
+      price INTEGER NOT NULL,
+      amount INTEGER NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS meals (
@@ -72,8 +73,6 @@ class AppState {
     mealsManager = MealsManager(db: _db!);
     planner = MealPlanner(db: _db!, mealsManager: mealsManager!);
   }
-
-
 }
 
 T iff<T>(cond, T a, T b) {

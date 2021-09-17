@@ -81,7 +81,7 @@ class MealsManager {
 
   List<Ingredient> getIngredients(int mealId) {
     final ingrdientsRows = db.select(
-        'SELECT  products.id AS productId, products.name AS productName, products.servings AS productServings, products.price AS productPrice, ingredients.servings AS ingredientServings  FROM ingredients INNER JOIN products ON products.id=ingredients.product_id WHERE ingredients.meal_id = ? ',
+        'SELECT  products.id AS productId, products.name AS productName, products.servings AS productServings, products.price AS productPrice, products.amount as productAmount, ingredients.servings AS ingredientServings  FROM ingredients INNER JOIN products ON products.id=ingredients.product_id WHERE ingredients.meal_id = ? ',
         [mealId]);
     developer.log(ingrdientsRows.toString(), name: 'tmm.db.getIngredients');
     List<Ingredient> res = [];
@@ -91,6 +91,7 @@ class MealsManager {
           name: row['productName'],
           price: Decimal.fromInt(row['productPrice']) / Decimal.fromInt(100),
           servings: row['productServings'],
+          amount: row['productAmount'],
           id: row['productId'],
         ),
         servings: row['ingredientServings'],

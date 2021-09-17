@@ -11,20 +11,27 @@ class ProductManager {
   int current = -1;
 
   ProductManager({
-      required this.db,
+    required this.db,
   });
 
   void addProduct(Product product) {
     final p = db.prepare(
-        'INSERT INTO products (name, servings, price) VALUES (?, ?, ?)');
-    p.execute([product.name, product.servings, product.priceCents]);
+        'INSERT INTO products (name, servings, price, amount) VALUES (?, ?, ?, ?)');
+    p.execute(
+        [product.name, product.servings, product.priceCents, product.amount]);
     p.dispose();
   }
 
   void updateProduct(Product product) {
     final p = db.prepare(
-        'UPDATE products SET name = ?, servings = ?, price = ? WHERE id = ?');
-    p.execute([product.name, product.servings, product.priceCents, product.id]);
+        'UPDATE products SET name = ?, servings = ?, price = ?, amount = ? WHERE id = ?');
+    p.execute([
+      product.name,
+      product.servings,
+      product.priceCents,
+      product.amount,
+      product.id
+    ]);
     p.dispose();
   }
 
@@ -42,6 +49,7 @@ class ProductManager {
         name: row['name'],
         servings: row['servings'].round(),
         price: Decimal.fromInt(row['price']) / Decimal.fromInt(100),
+        amount: row['amount'],
         id: row['id'],
       );
       lst.add(product);
@@ -70,6 +78,7 @@ class ProductMenu {
       name: name.text,
       servings: int.parse(servings.text),
       price: Decimal.parse(price.text),
+      amount: 0,
       id: -1,
     );
   }
@@ -80,6 +89,7 @@ class Product {
   String name;
   int servings;
   Decimal price;
+  int amount;
   int get priceCents =>
       double.parse((price * Decimal.fromInt(100)).toStringAsFixed(2)).round();
 
@@ -89,6 +99,7 @@ class Product {
     required this.name,
     required this.servings,
     required this.price,
+    required this.amount,
     this.id = -1,
   });
 
@@ -118,10 +129,36 @@ class _ProductsPageState extends State<ProductsPage> {
         itemCount: _products.length,
         itemBuilder: (context, index) {
           var product = _products[index];
+          Widget _trailing = const SizedBox.shrink();
+          if (product.amount > 0) {
+            _trailing = IconButton(
+              icon: const Icon(Icons.remove),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: () {
+                setState(() {
+                  product.amount -= 1;
+                  _productManager.updateProduct(product);
+                });
+              },
+            );
+          }
           return Card(
               child: ListTile(
             title: Text(
-                "${product.name} (\$${product.pricePerServing.toStringAsFixed(2)}/serv)"),
+                "${product.amount}x ${product.name} (\$${product.pricePerServing.toStringAsFixed(2)}/serv)"),
+            trailing: _trailing,
+            leading: IconButton(
+              icon: const Icon(Icons.add),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: () {
+                setState(() {
+                  product.amount += 1;
+                  _productManager.updateProduct(product);
+                });
+              },
+            ),
             onTap: () {
               setState(() {
                 _productManager.current = product.id;
@@ -248,7 +285,8 @@ class _ProductsAddPageState extends State<ProductsAddPage> {
                         ),
                         onPressed: () {
                           setState(() {
-                            _productManager.removeProduct(_productManager.current);
+                            _productManager
+                                .removeProduct(_productManager.current);
                             _productManager.menu.clear();
                           });
                           Navigator.pop(context);
