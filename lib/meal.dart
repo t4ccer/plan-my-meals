@@ -34,6 +34,7 @@ class MealMenu {
   void clear() {
     name.text = '';
     ingredientInput.text = '';
+    servings.text = '';
     ingredients = {};
   }
 
@@ -253,8 +254,8 @@ class _MealsAddPageState extends State<MealsAddPage> {
                             constraints: const BoxConstraints(),
                             onPressed: () {
                               setState(() {
-                                _mealsManager
-                                    .menu.ingredients[product.id]!.servings -= 1;
+                                _mealsManager.menu.ingredients[product.id]!
+                                    .servings -= 1;
                               });
                             },
                           );

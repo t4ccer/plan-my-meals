@@ -62,7 +62,6 @@ class AppState {
   }
 
   void addProduct(Product product) {
-    developer.log(product.toString(), name: 'pmm.db.addProduct');
     final p = _db.prepare(
         'INSERT INTO products (name, servings, price) VALUES (?, ?, ?)');
     p.execute([product.name, product.servings, product.priceCents]);
@@ -70,7 +69,6 @@ class AppState {
   }
 
   void updateProduct(Product product) {
-    developer.log(product.toString(), name: 'pmm.db.updateProduct');
     final p = _db.prepare(
         'UPDATE products SET name = ?, servings = ?, price = ? WHERE id = ?');
     p.execute([product.name, product.servings, product.priceCents, product.id]);
@@ -87,14 +85,12 @@ class AppState {
     final ResultSet res = _db.select('SELECT * FROM products');
     List<Product> lst = [];
     for (final row in res) {
-      developer.log(row.toString(), name: 'pmm.db.getProducts');
       var product = Product(
         name: row['name'],
         servings: row['servings'].round(),
         price: Decimal.fromInt(row['price']) / Decimal.fromInt(100),
         id: row['id'],
       );
-      developer.log(product.toString(), name: 'pmm.db.getProducts');
       lst.add(product);
     }
     return lst;
@@ -109,12 +105,12 @@ class AppState {
     _addIngredients(id, meal.ingredients);
   }
 
-  void _addIngredients(int id, List<Ingredient> ingredients) {
+  void _addIngredients(int mealId, List<Ingredient> ingredients) {
     final ingr = _db.prepare(
         "INSERT INTO ingredients (meal_id, product_id, servings) VALUES (?, ?, ?)");
     for (var i in ingredients) {
       if (i.servings < 1) continue;
-      ingr.execute([id, i.product.id, i.servings]);
+      ingr.execute([mealId, i.product.id, i.servings]);
     }
     ingr.dispose();
   }
@@ -147,13 +143,13 @@ class AppState {
     final ResultSet mealsRows = _db.select('SELECT * FROM meals');
     List<Meal> lst = [];
     for (final mealRow in mealsRows) {
-      var meal = Meal(
+      final meal = Meal(
         id: mealRow['id'],
         name: mealRow['name'],
         servings: mealRow['servings'].round(),
         ingredients: _getIngredients(mealRow['id']),
       );
-      developer.log(meal.toString(), name: 'pmm.db.getMeals');
+      developer.log(meal.toString(), name: 'tmm.db.getMeals');
       lst.add(meal);
     }
     return lst;
@@ -161,12 +157,11 @@ class AppState {
 
   List<Ingredient> _getIngredients(int mealId) {
     final ingrdientsRows = _db.select(
-        'SELECT products.id AS productId, products.name AS productName, products.servings AS productServings, products.price AS productPrice, ingredients.servings AS ingredientServings FROM products INNER JOIN ingredients ON ingredients.product_id == products.id INNER JOIN meals ON ingredients.meal_id == ?',
+        'SELECT  products.id AS productId, products.name AS productName, products.servings AS productServings, products.price AS productPrice, ingredients.servings AS ingredientServings  FROM ingredients INNER JOIN products ON products.id=ingredients.product_id WHERE ingredients.meal_id = ? ',
         [mealId]);
-
+    developer.log(ingrdientsRows.toString(), name: 'tmm.db.getIngredients');
     List<Ingredient> res = [];
-    for (final row in ingrdientsRows) {
-      developer.log(row.toString(), name: 'my.app.category');
+    for (var row in ingrdientsRows) {
       var ingr = Ingredient(
         product: Product(
           name: row['productName'],
@@ -176,6 +171,7 @@ class AppState {
         ),
         servings: row['ingredientServings'],
       );
+      developer.log(ingr.toString(), name: 'tmm.db.getIngredients');
       res.add(ingr);
     }
     return res;
